@@ -1,0 +1,89 @@
+{
+  "overall": {
+    "uniform": {
+      "correct": 502,
+      "total": 1018,
+      "acc": 49.31237721021611
+    },
+    "semantic": {
+      "correct": 584,
+      "total": 1018,
+      "acc": 57.36738703339882
+    },
+    "keyscore": {
+      "correct": 581,
+      "total": 1018,
+      "acc": 57.07269155206287
+    }
+  },
+  "per_task": {
+    "2_needle": {
+      "uniform": {
+        "correct": 215,
+        "total": 353,
+        "acc": 60.906515580736546
+      },
+      "semantic": {
+        "correct": 261,
+        "total": 353,
+        "acc": 73.93767705382436
+      },
+      "keyscore": {
+        "correct": 262,
+        "total": 353,
+        "acc": 74.22096317280453
+      }
+    },
+    "6_anomaly_reco": {
+      "uniform": {
+        "correct": 133,
+        "total": 200,
+        "acc": 66.5
+      },
+      "semantic": {
+        "correct": 121,
+        "total": 200,
+        "acc": 60.5
+      },
+      "keyscore": {
+        "correct": 120,
+        "total": 200,
+        "acc": 60.0
+      }
+    },
+    "4_count": {
+      "uniform": {
+        "correct": 42,
+        "total": 206,
+        "acc": 20.388349514563107
+      },
+      "semantic": {
+        "correct": 67,
+        "total": 206,
+        "acc": 32.52427184466019
+      },
+      "keyscore": {
+        "correct": 66,
+        "total": 206,
+        "acc": 32.03883495145631
+      }
+    },
+    "5_order": {
+      "uniform": {
+        "correct": 112,
+        "total": 259,
+        "acc": 43.24324324324324
+      },
+      "semantic": {
+        "correct": 135,
+        "total": 259,
+        "acc": 52.12355212355212
+      },
+      "keyscore": {
+        "correct": 133,
+        "total": 259,
+        "acc": 51.351351351351354
+      }
+    }
+  }
+}

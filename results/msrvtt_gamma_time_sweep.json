@@ -1,0 +1,133 @@
+{
+  "metadata": {
+    "list": "$KEYSCORE_DATA_ROOT/MSRVTT/structured-symlinks/test_list_miech.txt",
+    "num_videos": 300,
+    "threshold": 0.5,
+    "gammas": [
+      0.0,
+      1.0,
+      2.0,
+      5.0,
+      10.0,
+      20.0
+    ],
+    "device": "cuda",
+    "note": "Sensitivity of STACFP temporal weight gamma_time (Eq. 3)."
+  },
+  "sweep": [
+    {
+      "gamma_time": 0.0,
+      "num_videos": 300,
+      "avg_clusters": 9.356666666666667,
+      "avg_proposals": 9.356666666666667,
+      "avg_selected_frames": 5.4366666666666665,
+      "retrieval": {
+        "recall_t2v": {
+          "1": 72.0,
+          "5": 91.0,
+          "10": 94.66666666666667
+        },
+        "recall_v2t": {
+          "1": 68.33333333333333,
+          "5": 90.66666666666667,
+          "10": 93.66666666666667
+        }
+      }
+    },
+    {
+      "gamma_time": 1.0,
+      "num_videos": 300,
+      "avg_clusters": 8.53,
+      "avg_proposals": 8.53,
+      "avg_selected_frames": 4.94,
+      "retrieval": {
+        "recall_t2v": {
+          "1": 71.33333333333333,
+          "5": 90.0,
+          "10": 94.0
+        },
+        "recall_v2t": {
+          "1": 69.33333333333333,
+          "5": 90.0,
+          "10": 93.0
+        }
+      }
+    },
+    {
+      "gamma_time": 2.0,
+      "num_videos": 300,
+      "avg_clusters": 8.336666666666666,
+      "avg_proposals": 8.336666666666666,
+      "avg_selected_frames": 4.8,
+      "retrieval": {
+        "recall_t2v": {
+          "1": 72.0,
+          "5": 91.66666666666667,
+          "10": 93.66666666666667
+        },
+        "recall_v2t": {
+          "1": 70.0,
+          "5": 90.66666666666667,
+          "10": 93.33333333333333
+        }
+      }
+    },
+    {
+      "gamma_time": 5.0,
+      "num_videos": 300,
+      "avg_clusters": 7.906666666666666,
+      "avg_proposals": 7.906666666666666,
+      "avg_selected_frames": 4.3966666666666665,
+      "retrieval": {
+        "recall_t2v": {
+          "1": 72.33333333333333,
+          "5": 90.33333333333333,
+          "10": 94.33333333333333
+        },
+        "recall_v2t": {
+          "1": 69.66666666666667,
+          "5": 90.0,
+          "10": 93.0
+        }
+      }
+    },
+    {
+      "gamma_time": 10.0,
+      "num_videos": 300,
+      "avg_clusters": 7.296666666666667,
+      "avg_proposals": 7.296666666666667,
+      "avg_selected_frames": 4.003333333333333,
+      "retrieval": {
+        "recall_t2v": {
+          "1": 72.33333333333333,
+          "5": 90.66666666666667,
+          "10": 94.66666666666667
+        },
+        "recall_v2t": {
+          "1": 69.66666666666667,
+          "5": 89.66666666666667,
+          "10": 92.0
+        }
+      }
+    },
+    {
+      "gamma_time": 20.0,
+      "num_videos": 300,
+      "avg_clusters": 6.653333333333333,
+      "avg_proposals": 6.653333333333333,
+      "avg_selected_frames": 3.5366666666666666,
+      "retrieval": {
+        "recall_t2v": {
+          "1": 72.66666666666667,
+          "5": 90.33333333333333,
+          "10": 94.0
+        },
+        "recall_v2t": {
+          "1": 67.0,
+          "5": 90.33333333333333,
+          "10": 93.33333333333333
+        }
+      }
+    }
+  ]
+}

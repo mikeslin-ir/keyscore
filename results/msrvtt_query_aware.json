@@ -1,0 +1,88 @@
+{
+  "metadata": {
+    "list": "$KEYSCORE_DATA_ROOT/MSRVTT/structured-symlinks/test_list_miech.txt",
+    "num_videos": 1000,
+    "threshold": 0.5,
+    "device": "cuda",
+    "scorer": {
+      "alpha": 0.7,
+      "beta": 0.1,
+      "gamma": 0.2
+    },
+    "stacfp": {
+      "frame_step": 5,
+      "gamma_time": 5,
+      "k_min": 6,
+      "k_max": 30
+    },
+    "note": "All methods share PE backbone + STACFP candidates; QueryTopK is frame-matched to KeyScore."
+  },
+  "stacfp_mean": {
+    "name": "stacfp_mean",
+    "num_videos": 1000,
+    "avg_selected_frames": 7.703,
+    "retrieval": {
+      "recall_t2v": {
+        "1": 49.0,
+        "5": 73.8,
+        "10": 81.3
+      },
+      "recall_v2t": {
+        "1": 49.3,
+        "5": 71.4,
+        "10": 79.2
+      }
+    }
+  },
+  "ufp8": {
+    "name": "ufp8",
+    "num_videos": 1000,
+    "avg_selected_frames": 8.0,
+    "retrieval": {
+      "recall_t2v": {
+        "1": 50.3,
+        "5": 74.1,
+        "10": 81.8
+      },
+      "recall_v2t": {
+        "1": 48.9,
+        "5": 71.9,
+        "10": 79.6
+      }
+    }
+  },
+  "query_topk": {
+    "name": "query_topk",
+    "num_videos": 1000,
+    "avg_selected_frames": 4.269,
+    "retrieval": {
+      "recall_t2v": {
+        "1": 59.7,
+        "5": 80.2,
+        "10": 88.9
+      },
+      "recall_v2t": {
+        "1": 58.7,
+        "5": 81.4,
+        "10": 88.1
+      }
+    }
+  },
+  "keyscore": {
+    "name": "keyscore",
+    "num_videos": 1000,
+    "avg_selected_frames": 4.269,
+    "retrieval": {
+      "recall_t2v": {
+        "1": 59.8,
+        "5": 80.2,
+        "10": 88.9
+      },
+      "recall_v2t": {
+        "1": 58.7,
+        "5": 81.4,
+        "10": 88.1
+      }
+    }
+  }
+}
