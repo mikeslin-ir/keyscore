@@ -2,6 +2,9 @@
 
 **Query-Conditioned Frame Utility for Efficient Video Understanding**
 
+[![arXiv](https://img.shields.io/badge/arXiv-2510.06509-b31b1b.svg)](https://arxiv.org/abs/2510.06509)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 KeyScore is a **training-free** frame-selection front-end for frozen video-language
 models. Instead of sampling frames uniformly, it asks a simple question for every
 candidate frame: *how much does keeping this frame change the model's answer to
@@ -122,6 +125,8 @@ KeyScore reaches near-parity with a 32-frame selector using **one quarter** the 
 | **STACFP + KeyScore** | **4.27** | 0.650 | 1.263 | 0.0003 | 1.914 | **59.8** |
 
 **Zero-shot action classification (HMDB-51):** F1 **0.675** with PE-Core-G Video + KeyScore.
+The selection threshold is swept and the best operating point reported, so this figure
+is an optimistic upper bound; see [`docs/RESULTS.md`](docs/RESULTS.md) §8.
 
 > Full tables, ablations and sensitivity sweeps are in [`docs/RESULTS.md`](docs/RESULTS.md).
 
@@ -475,11 +480,12 @@ space; we demonstrate this with both ViCLIP and PE-Core.
 If you find this work useful, please cite:
 
 ```bibtex
-@inproceedings{keyscore2026,
-  title     = {KeyScore: Query-Conditioned Frame Utility for Efficient Video Understanding},
-  booktitle = {NeurIPS Workshop on Grounded and Faithful Vision-Language Models
-               for Real-World Deployment (VLM4RWD)},
-  year      = {2026}
+@article{lin2025keyscore,
+  title   = {From Captions to Keyframes: KeyScore for Multimodal Frame Scoring
+             and Video-Language Understanding},
+  author  = {Lin, Shih-Yao and Paul, Sibendu and Chen, Caren},
+  journal = {arXiv preprint arXiv:2510.06509},
+  year    = {2025}
 }
 ```
 

@@ -159,9 +159,11 @@ Raw data: [`../results/mlvu_summary.json`](../results/mlvu_summary.json).
 | SigLIP2-g-opt | 384 | 0.518 | 0.915 |
 | **PE-Core-G Video + KeyScore** | 448 | **0.675** | **0.972** |
 
-Caveat: baselines use different encoders and input resolutions, so this is an
-auxiliary cross-encoder generality check rather than a controlled same-backbone
-ablation.
+Caveats: the selection threshold is swept and the best operating point is reported.
+Because that threshold is chosen on the evaluation set rather than a held-out split,
+the F1 above is an **optimistic upper bound**. Baselines also use different encoders
+and input resolutions, so this is an auxiliary cross-encoder generality check rather
+than a controlled same-backbone ablation.
 
 ---
 
