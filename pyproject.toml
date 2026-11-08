@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "keyscore"
+version = "0.1.0"
+description = "Training-free query-conditioned frame selection for video understanding"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+dependencies = ["torch>=2.0"]
+
+[project.optional-dependencies]
+test = ["pytest>=7", "numpy>=1.24"]
+
+[project.urls]
+Repository = "https://github.com/mikeslin-ir/keyscore"
+Paper = "https://arxiv.org/abs/2510.06509"
+
+[tool.setuptools.packages.find]
+include = ["keyscore", "keyscore.*"]

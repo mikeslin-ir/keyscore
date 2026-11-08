@@ -2,21 +2,17 @@
 """
 MLVU (Multi-task Long Video Understanding) evaluation for KeyScore.
 
-We evaluate the *localizable-evidence* multiple-choice tasks of MLVU --
-needle (findNeedle), anomaly_reco, count, order -- where the answer hinges on
-a sparse set of decisive frames rather than holistic global reasoning. This is
-the regime where decision-centric frame utility (drop-impact + temporal
-coverage) is hypothesized to help most over a purely semantic top-K selector,
-and complements the EgoSchema negative result (holistic egocentric reasoning,
-where uniform sampling is already near-optimal).
+Evaluate Needle, AnomalyReco, Count, and Order with uniform candidates and
+fixed final budgets. Count and Order can require evidence from multiple
+moments; these tasks are not all single-frame-evidence problems.
 
 Pipeline (mirrors the Video-MME / EgoSchema pipeline in this repo):
   1. Extract a uniform candidate pool of N frames per video (cv2).
   2. Embed candidates with ClipEncoder (CLIP-ViT-H).
   3. For each question, select K frames with each method:
        - uniform   : K evenly spaced frames (blind baseline, "UFP")
-       - semantic  : FrameScorer with alpha=1 (Query-TopK, semantic-only)
-       - keyscore  : FrameScorer S+T+D (alpha=0.7, beta=0.1, gamma=0.2)
+       - semantic  : KeyScore with alpha=1 (Query-TopK, semantic-only)
+       - keyscore  : KeyScore (alpha=0.7, beta=0.1, gamma=0.2)
   4. Answer the 4-way MCQ with Qwen2-VL.
   5. Score against the official MLVU annotations (answer is the text of the
      correct candidate; matched back to its index).
@@ -33,13 +29,14 @@ Usage
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+from itertools import combinations
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-import cv2
 import torch
-from tqdm import tqdm
 
 _ROOT = Path(__file__).resolve().parents[2]
 _HERE = Path(__file__).resolve().parent
@@ -47,9 +44,11 @@ for _p in (str(_ROOT), str(_HERE)):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from keyscore.scoring.frame_scorer import FrameScorer, MeanPooling
-from keyscore.encoders.clip_encoder import ClipEncoder
-from qwen_vl_runner import QwenVLRunner
+from keyscore import KeyScore
+from keyscore.evaluation import paired_mcnemar
+
+if TYPE_CHECKING:
+    from qwen_vl_runner import QwenVLRunner
 
 LETTERS = ["A", "B", "C", "D"]
 
@@ -74,6 +73,8 @@ def _uniform_idx(total: int, k: int) -> list[int]:
 
 def extract_uniform_frames(video_path: Path, out_dir: Path, n: int) -> list[str]:
     """Extract n uniformly spaced frames from video_path as jpgs. Returns paths."""
+    import cv2
+
     out_dir.mkdir(parents=True, exist_ok=True)
     existing = sorted(out_dir.glob("frame_*.jpg"))
     if len(existing) >= n:
@@ -99,15 +100,15 @@ def extract_uniform_frames(video_path: Path, out_dir: Path, n: int) -> list[str]
 
 
 def select_topk(frame_embs: torch.Tensor, text_emb: torch.Tensor,
-                scorer: FrameScorer, k: int) -> list[int]:
+                scorer: KeyScore, k: int) -> list[int]:
     """Return sorted (temporal-order) indices of top-k frames by scorer."""
     if text_emb.dim() == 2:
+        if text_emb.shape[0] != 1:
+            raise ValueError("MLVU selection requires exactly one question embedding.")
         text_emb = text_emb.squeeze(0)
-    out = scorer.compute(frame_embs, text_emb)
-    scores = out["scores"]
-    k_eff = min(k, scores.shape[0])
-    idx = scores.topk(k_eff).indices.tolist()
-    return sorted(idx)
+    if text_emb.dim() != 1:
+        raise ValueError("MLVU selection requires one question embedding with shape [D].")
+    return scorer.select(frame_embs, text_emb, k).indices.sort().values.tolist()
 
 
 def answer_mcq4(runner: QwenVLRunner, batch, max_new_tokens: int = 6) -> list[str]:
@@ -145,8 +146,17 @@ def _extract_letter4(text: str) -> str:
 
 
 # ----------------------------------------------------------------------------
-def build_subset(mlvu_root: Path, tasks: list[str], per_task: int) -> list[dict]:
+def build_subset(mlvu_root: Path, tasks: list[str], per_task: int,
+                 question_ids: list[str] | None = None) -> list[dict]:
     """Load the MCQ subset: per_task questions per task, with gt letter."""
+    if question_ids is not None:
+        if (not isinstance(question_ids, list) or not question_ids
+                or not all(isinstance(uid, str) for uid in question_ids)):
+            raise ValueError("question_ids must be a nonempty JSON list of strings.")
+        if len(question_ids) != len(set(question_ids)):
+            raise ValueError("question_ids must not contain duplicates.")
+    elif per_task < 1:
+        raise ValueError("per_task must be positive.")
     items = []
     for t in tasks:
         folder = TASK_FOLDER[t]
@@ -169,32 +179,72 @@ def build_subset(mlvu_root: Path, tasks: list[str], per_task: int) -> list[dict]
                 "uid": f"{t}/{q['video']}/{n}",
             })
             n += 1
-            if n >= per_task:
+            if question_ids is None and n >= per_task:
                 break
+    if question_ids is not None:
+        by_id = {item["uid"]: item for item in items}
+        missing = set(question_ids) - by_id.keys()
+        if missing:
+            raise ValueError(f"Question IDs missing from annotations: {sorted(missing)[:5]}")
+        items = [by_id[uid] for uid in question_ids]
     return items
 
 
 def run(mlvu_root: Path, out_dir: Path, tasks: list[str], per_task: int,
         n_candidates: int, k: int, model_id: str, cache_dir: Path,
-        methods: list[str]) -> None:
+        methods: list[str], question_ids_path: Path | None = None) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     cache_dir.mkdir(parents=True, exist_ok=True)
     video_root = mlvu_root / "videos"
 
-    items = build_subset(mlvu_root, tasks, per_task)
+    question_ids = (
+        json.loads(question_ids_path.read_text()) if question_ids_path is not None else None
+    )
+    items = build_subset(mlvu_root, tasks, per_task, question_ids)
+    missing_videos = [
+        it["uid"] for it in items
+        if not (video_root / it["folder"] / it["video"]).is_file()
+    ]
+    if question_ids is not None and missing_videos:
+        raise FileNotFoundError(f"Videos missing for manifest questions: {missing_videos[:5]}")
     # keep only items whose video exists locally
     items = [it for it in items
              if (video_root / it["folder"] / it["video"]).exists()]
+    if not items:
+        raise ValueError("No MLVU questions have available videos.")
     print(f"[INFO] MLVU subset: {len(items)} questions across {tasks} "
           f"| n_candidates={n_candidates} | k={k}")
 
-    scorer_keyscore = FrameScorer(MeanPooling(), alpha=0.7, beta=0.1, gamma=0.2)
-    scorer_semantic = FrameScorer(MeanPooling(), alpha=1.0, beta=0.0, gamma=0.0)
+    ckpt = out_dir / "mlvu_checkpoint.jsonl"
+    config_path = out_dir / "run_config.json"
+    config = {
+        "model_id": model_id, "n_candidates": n_candidates, "k": k,
+        "methods": methods, "tasks": tasks, "question_ids": [it["uid"] for it in items],
+        "selection_weights": {"keyscore": [0.7, 0.1, 0.2], "semantic": [1.0, 0.0, 0.0]},
+        "annotation_sha256": {
+            task: hashlib.sha256((mlvu_root / "json" / f"{task}.json").read_bytes()).hexdigest()
+            for task in tasks
+        },
+        "selector_api": "KeyScore; stable candidate-index ties",
+    }
+    if config_path.exists():
+        if json.loads(config_path.read_text()) != config:
+            raise ValueError("MLVU run configuration mismatch; choose a new output directory.")
+    elif ckpt.exists():
+        raise ValueError("Legacy checkpoint has no run_config.json; summarize it or use a new output.")
+    else:
+        config_path.write_text(json.dumps(config, indent=2))
+
+    from keyscore.encoders.clip_encoder import ClipEncoder
+    from qwen_vl_runner import QwenVLRunner
+    from tqdm import tqdm
+
+    scorer_keyscore = KeyScore()
+    scorer_semantic = KeyScore(alpha=1.0, beta=0.0, gamma=0.0)
 
     encoder = ClipEncoder(batch_size=256, amp=True, num_workers=4)
     runner = QwenVLRunner(model_id=model_id)
 
-    ckpt = out_dir / "mlvu_checkpoint.jsonl"
     done = set()
     if ckpt.exists():
         for line in ckpt.read_text().splitlines():
@@ -216,6 +266,8 @@ def run(mlvu_root: Path, out_dir: Path, tasks: list[str], per_task: int,
             video_root / it["folder"] / it["video"],
             cache_dir / vid_key, n_candidates)
         if len(frame_paths) < k:
+            if question_ids is not None:
+                raise RuntimeError(f"Manifest question {it['uid']}: fewer than {k} decoded candidates.")
             tqdm.write(f"[WARN] {it['uid']}: only {len(frame_paths)} frames, skip")
             continue
 
@@ -249,11 +301,21 @@ def summarize(ckpt: Path, out_dir: Path, methods: list[str],
               tasks: list[str]) -> None:
     overall = {m: [0, 0] for m in methods}
     per_task = {t: {m: [0, 0] for m in methods} for t in tasks}
+    records = []
+    seen = set()
     for line in ckpt.read_text().splitlines():
         if not line.strip():
             continue
         rec = json.loads(line)
         t = rec.get("task")
+        if rec["uid"] in seen:
+            raise ValueError(f"Duplicate question ID in checkpoint: {rec['uid']}")
+        if t not in tasks or any(m not in rec for m in methods):
+            raise ValueError("Checkpoint questions must match the requested tasks and methods.")
+        if any(rec[m]["correct"] not in (0, 1) for m in methods):
+            raise ValueError("Checkpoint correctness values must be zero or one.")
+        seen.add(rec["uid"])
+        records.append(rec)
         for m in methods:
             if m in rec:
                 overall[m][1] += 1
@@ -261,6 +323,9 @@ def summarize(ckpt: Path, out_dir: Path, methods: list[str],
                 if t in per_task:
                     per_task[t][m][1] += 1
                     per_task[t][m][0] += rec[m]["correct"]
+
+    if not records:
+        raise ValueError("The MLVU checkpoint is empty.")
 
     def fmt(counts):
         out = {}
@@ -272,8 +337,21 @@ def summarize(ckpt: Path, out_dir: Path, methods: list[str],
 
     summary = {"overall": fmt(overall),
                "per_task": {t: fmt(per_task[t]) for t in tasks}}
+    paired = {}
+    for a, b in combinations(methods, 2):
+        paired[f"{a}_vs_{b}"] = paired_mcnemar(
+            [rec[a]["correct"] for rec in records],
+            [rec[b]["correct"] for rec in records],
+        )
+    summary["paired_mcnemar"] = paired
+    summary["metadata"] = {
+        "num_questions": len(records),
+        "num_videos": len({rec["uid"].rsplit("/", 1)[0] for rec in records}),
+        "uncertainty_unit": "question; no correction for within-video dependence",
+        "provenance": "Recomputed from saved predictions, not new model inference.",
+    }
 
-    print("\n=== MLVU accuracy (localizable-evidence MCQ tasks) ===")
+    print("\n=== MLVU paired-question accuracy ===")
     print("  [overall]")
     for m in methods:
         s = summary["overall"][m]
@@ -283,7 +361,8 @@ def summarize(ckpt: Path, out_dir: Path, methods: list[str],
         for m in methods:
             s = summary["per_task"][t][m]
             print(f"    {m:10s}: {s['correct']}/{s['total']} = {s['acc']:.2f}%")
-    (out_dir / "mlvu_summary.json").write_text(json.dumps(summary, indent=2))
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "mlvu_summary.json").write_text(json.dumps(summary, indent=2, allow_nan=False))
     print(f"[INFO] Summary -> {out_dir / 'mlvu_summary.json'}")
 
 
@@ -292,16 +371,21 @@ def main():
     ap.add_argument("--mlvu_root", required=True, type=Path)
     ap.add_argument("--out_dir", required=True, type=Path)
     ap.add_argument("--cache_dir", type=Path, default=None)
-    ap.add_argument("--tasks", nargs="+",
+    ap.add_argument("--tasks", nargs="+", choices=tuple(TASK_FOLDER),
                     default=["2_needle", "6_anomaly_reco", "4_count", "5_order"])
     ap.add_argument("--per_task", type=int, default=40)
+    ap.add_argument("--question_ids", type=Path,
+                    help="JSON list of exact question IDs; overrides per_task.")
     ap.add_argument("--n_candidates", type=int, default=32)
     ap.add_argument("--k", type=int, default=8)
     ap.add_argument("--model_id", default="Qwen/Qwen2-VL-7B-Instruct")
-    ap.add_argument("--methods", nargs="+",
+    ap.add_argument("--methods", nargs="+", choices=["uniform", "semantic", "keyscore"],
                     default=["uniform", "semantic", "keyscore"])
     ap.add_argument("--summarize_only", action="store_true")
     args = ap.parse_args()
+    if (args.k < 1 or args.n_candidates < args.k
+            or (args.question_ids is None and args.per_task < 1)):
+        ap.error("Require k>=1, n_candidates>=k, and per_task>=1 without a manifest.")
 
     cache_dir = args.cache_dir or (args.mlvu_root / "frame_cache")
     if args.summarize_only:
@@ -309,7 +393,7 @@ def main():
                   args.methods, args.tasks)
         return
     run(args.mlvu_root, args.out_dir, args.tasks, args.per_task,
-        args.n_candidates, args.k, args.model_id, cache_dir, args.methods)
+        args.n_candidates, args.k, args.model_id, cache_dir, args.methods, args.question_ids)
 
 
 if __name__ == "__main__":

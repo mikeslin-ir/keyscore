@@ -1,12 +1,11 @@
 from __future__ import annotations
 from dataclasses import dataclass
+import math
 from typing import Optional, Tuple, Protocol, Dict
 
 import torch
 import torch.nn.functional as F
 
-# ---- copy the helper funcs from your module ----
-import torch.nn.functional as F
 def l2(x: torch.Tensor) -> torch.Tensor:
     return F.normalize(x, dim=-1)
 def cos(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
@@ -14,8 +13,9 @@ def cos(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     return (a * b).sum(dim=-1)
 
 def minmax(x: torch.Tensor) -> torch.Tensor:
-    mn, mx = x.min(), x.max()
-    return (x - mn) / (mx - mn + 1e-8) if (mx - mn) > 1e-8 else torch.zeros_like(x)
+    mn = x.amin(dim=-1, keepdim=True)
+    span = x.amax(dim=-1, keepdim=True) - mn
+    return torch.where(span > 1e-8, (x - mn) / (span + 1e-8), torch.zeros_like(x))
 
 
 
@@ -52,20 +52,59 @@ class FrameScorer:
     """
     Compute per-frame scores via three signals:
       1) Semantic similarity (text ↔ frame)
-      2) Temporal representativeness (video ↔ frame)
+      2) Candidate-context representativeness (pooled candidates ↔ frame)
       3) Frame-drop contribution (Δ cosine(text, video) when leaving the frame out)
     """
     pooling: Pooling
     alpha: float = 0.85   # semantic weight
-    beta: float  = 0.05   # temporal weight
+    beta: float  = 0.05   # representativeness weight
     gamma: float = 0.1   # drop-based contextual weight
     normalize_each: bool = True
     use_contextual: bool = True  # kept for compatibility
 
     def __post_init__(self):
+        if not all(math.isfinite(w) and w >= 0 for w in (self.alpha, self.beta, self.gamma)):
+            raise ValueError("Weights must be finite and nonnegative.")
         s = self.alpha + self.beta + self.gamma
         if abs(s - 1.0) > 1e-6:
             raise ValueError("alpha + beta + gamma must sum to 1.0")
+
+    def _combine_scores(
+        self, semantic: torch.Tensor, representative: torch.Tensor, drop: torch.Tensor
+    ) -> Dict[str, torch.Tensor]:
+        if self.normalize_each:
+            semantic = minmax(semantic)
+            representative = minmax(representative)
+            drop = minmax(drop)
+        return {
+            "scores": self.alpha * semantic + self.beta * representative + self.gamma * drop,
+            "sim_semantic": semantic,
+            "sim_temporal": representative,
+            "sim_drop": drop,
+        }
+
+    def compute_queries(
+        self, frame_embs: torch.Tensor, text_embs: torch.Tensor
+    ) -> Dict[str, torch.Tensor]:
+        """Score one candidate pool independently for each query, without matched labels."""
+        if not isinstance(self.pooling, MeanPooling):
+            raise ValueError("compute_queries requires MeanPooling.")
+        if frame_embs.ndim != 2 or text_embs.ndim != 2:
+            raise ValueError("Shapes must be frame_embs=[N,D], text_embs=[Q,D].")
+        if frame_embs.shape[0] == 0 or text_embs.shape[0] == 0:
+            raise ValueError("Candidate and query sets must be nonempty.")
+        if frame_embs.shape[1] != text_embs.shape[1]:
+            raise ValueError("Frame and text embedding dimensions must match.")
+        f, t = l2(frame_embs), l2(text_embs)
+        v, _ = self.pooling(f)
+        semantic = t @ f.T
+        representative = (f @ v).expand(text_embs.shape[0], -1)
+        if f.shape[0] == 1:
+            drop = torch.zeros_like(semantic)
+        else:
+            leave_one_out = l2(f.sum(dim=0).unsqueeze(0) - f)
+            drop = (t @ v).unsqueeze(1) - t @ leave_one_out.T
+        return self._combine_scores(semantic, representative, drop)
 
     def compute(
         self,
@@ -91,7 +130,7 @@ class FrameScorer:
         # 1) Semantic: score(v_i, w) = v_i · w  (equation 1)
         sim_semantic = (f * t).sum(dim=-1)        # [N]
 
-        # 2) Temporal Representation: cosine(frame_i, video)
+        # The historical output key is retained for backwards compatibility.
         sim_temporal = (f * v).sum(dim=-1)        # [N]
 
         # 3) Frame-drop score: contribution to text–video similarity
@@ -121,19 +160,8 @@ class FrameScorer:
                 drops.append((base_sim - sim_minus_i).unsqueeze(0))
             sim_drop = torch.cat(drops, dim=0)                    # [N]
 
-        # Normalize each component if requested
-        if self.normalize_each:
-            sim_semantic = minmax(sim_semantic)
-            sim_temporal = minmax(sim_temporal)
-            sim_drop     = minmax(sim_drop)
-
-        scores = self.alpha * sim_semantic + self.beta * sim_temporal + self.gamma * sim_drop
-
         return {
-            "scores": scores,          # [N]
-            "sim_semantic": sim_semantic,      # [N]
-            "sim_temporal": sim_temporal,    # [N]
-            "sim_drop": sim_drop,      # [N]
+            **self._combine_scores(sim_semantic, sim_temporal, sim_drop),
             "video_emb": v,            # [D]
             "attn": attn,              # [N] or None
         }

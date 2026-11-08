@@ -85,5 +85,35 @@
         "acc": 51.351351351351354
       }
     }
+  },
+  "paired_mcnemar": {
+    "uniform_vs_semantic": {
+      "a_only_correct": 58,
+      "b_only_correct": 140,
+      "two_sided_exact_p": 5.237971662487788e-09
+    },
+    "uniform_vs_keyscore": {
+      "a_only_correct": 60,
+      "b_only_correct": 139,
+      "two_sided_exact_p": 2.1204459267245956e-08
+    },
+    "semantic_vs_keyscore": {
+      "a_only_correct": 7,
+      "b_only_correct": 4,
+      "two_sided_exact_p": 0.548828125
+    }
+  },
+  "metadata": {
+    "num_questions": 1018,
+    "num_videos": 794,
+    "uncertainty_unit": "question; no correction for within-video dependence",
+    "provenance": "Recomputed from saved predictions, not new model inference.",
+    "question_ids_file": "mlvu_question_ids.json",
+    "question_ids_sha256": "439a685bd64a9daa2fa7433610fbd3de606ff22ea1c6c593340bfb73652db1cf",
+    "checkpoint_sha256": "3f8e5efd34542a907a74712abeee4ea74f046043946cd7dbe3d0baffd48fe8b3",
+    "selector_model_id": "laion/CLIP-ViT-H-14-laion2B-s32B-b79K",
+    "qa_model_id": "Qwen/Qwen2-VL-7B-Instruct",
+    "n_candidates": 32,
+    "k": 8
   }
 }

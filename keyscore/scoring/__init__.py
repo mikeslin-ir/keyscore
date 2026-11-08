@@ -3,5 +3,10 @@ from keyscore.scoring.frame_scorer import (
     MeanPooling,
     TextGuidedAttentionPooling,
 )
+from keyscore.scoring.keyscore import FrameScores, KeyScore, SelectionResult
+from keyscore.scoring.selection import METHODS, WEIGHTS, SelectionMethod
 
-__all__ = ["FrameScorer", "MeanPooling", "TextGuidedAttentionPooling"]
+__all__ = [
+    "KeyScore", "FrameScores", "SelectionResult", "SelectionMethod",
+    "METHODS", "WEIGHTS", "FrameScorer", "MeanPooling", "TextGuidedAttentionPooling",
+]

@@ -1,0 +1,251 @@
+{
+  "metadata": {
+    "dataset": "MSR-VTT",
+    "protocol": "all-query-video-pairs, first caption per video",
+    "run_kind": "full-list-single-caption",
+    "not_standard_all_caption_benchmark": true,
+    "num_videos": 1000,
+    "num_queries": 1000,
+    "num_query_video_pairs": 1000000,
+    "requested_k": 4,
+    "weights": {
+      "semantic": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "semantic_drop": [
+        0.8,
+        0.0,
+        0.2
+      ],
+      "keyscore": [
+        0.7,
+        0.1,
+        0.2
+      ]
+    },
+    "mmr_relevance": 0.7,
+    "parameter_selection": "prespecified, no test tuning",
+    "backbone": "hf-hub:timm/PE-Core-bigG-14-448",
+    "proposal_config": {
+      "frame_step": 5,
+      "gamma_time": 5.0,
+      "k_min": 6,
+      "k_max": 30,
+      "color_space": "HSV",
+      "hist_bins": [
+        8,
+        8,
+        8
+      ],
+      "resize_shorter_to": 256,
+      "random_state": 42,
+      "image_quality": 95
+    },
+    "list_sha256": "e2b489732475874bb32dd2689bd3a1e13a8473a9bf69a6b97efb8f39a1c12d1e",
+    "annotation_sha256": "c6cb51bb725b76e78255f87c5fbb96886957ac53503a39bb03bff40b419cf996",
+    "cached_original_sampling_sec": 601.7995643760078,
+    "cached_original_encoding_sec": 1274.8790775602683,
+    "online_timing_scope": "Cached embeddings already resident on device; selector, aggregation and pair scoring. Excludes retrieval ranking, result serialization, and the isolated oracle diagnostic.",
+    "hardware": {
+      "device": "cuda",
+      "gpu": "NVIDIA GB10",
+      "architecture": "aarch64",
+      "torch": "2.12.0+cu130",
+      "python": "3.10.14",
+      "timing_status": "Exploratory; concurrent GPU activity is not excluded."
+    },
+    "candidate_counts": {
+      "mean": 7.703,
+      "min": 6,
+      "max": 29
+    },
+    "mean_candidate_pairwise_cosine": 0.823682277739048
+  },
+  "methods": {
+    "candidate_mean": {
+      "recall_t2v": {
+        "1": 49.0,
+        "5": 73.79999542236328,
+        "10": 81.30000305175781
+      },
+      "recall_v2t": {
+        "1": 49.29999923706055,
+        "5": 71.4000015258789,
+        "10": 79.0999984741211
+      },
+      "online_sec": 0.12623885506764054
+    },
+    "semantic": {
+      "recall_t2v": {
+        "1": 50.70000457763672,
+        "5": 73.0,
+        "10": 81.69999694824219
+      },
+      "recall_v2t": {
+        "1": 50.900001525878906,
+        "5": 72.89999389648438,
+        "10": 82.0
+      },
+      "online_sec": 1.352001337800175,
+      "avg_selected_frames": 4.0,
+      "avg_selected_pairwise_cosine": 0.8315469026565552
+    },
+    "semantic_drop": {
+      "recall_t2v": {
+        "1": 50.5,
+        "5": 73.0999984741211,
+        "10": 81.4000015258789
+      },
+      "recall_v2t": {
+        "1": 50.80000305175781,
+        "5": 72.89999389648438,
+        "10": 81.69999694824219
+      },
+      "online_sec": 1.0947197433561087,
+      "avg_selected_frames": 4.0,
+      "avg_selected_pairwise_cosine": 0.8291170001029968
+    },
+    "keyscore": {
+      "recall_t2v": {
+        "1": 50.5,
+        "5": 73.0,
+        "10": 81.80000305175781
+      },
+      "recall_v2t": {
+        "1": 50.80000305175781,
+        "5": 73.0,
+        "10": 82.0999984741211
+      },
+      "online_sec": 1.053347690962255,
+      "avg_selected_frames": 4.0,
+      "avg_selected_pairwise_cosine": 0.8327940106391907
+    },
+    "greedy": {
+      "recall_t2v": {
+        "1": 50.400001525878906,
+        "5": 73.29999542236328,
+        "10": 81.80000305175781
+      },
+      "recall_v2t": {
+        "1": 50.80000305175781,
+        "5": 73.0999984741211,
+        "10": 81.9000015258789
+      },
+      "online_sec": 1.9702421370893717,
+      "avg_selected_frames": 4.0,
+      "avg_selected_pairwise_cosine": 0.8150385618209839
+    },
+    "mmr": {
+      "recall_t2v": {
+        "1": 50.599998474121094,
+        "5": 73.5,
+        "10": 81.5999984741211
+      },
+      "recall_v2t": {
+        "1": 50.5,
+        "5": 72.69999694824219,
+        "10": 80.0999984741211
+      },
+      "online_sec": 1.4940578313544393,
+      "avg_selected_frames": 4.0,
+      "avg_selected_pairwise_cosine": 0.7851870059967041
+    }
+  },
+  "diagnostics": {
+    "own_caption_conditioned_keyscore": {
+      "recall_t2v": {
+        "1": 58.70000076293945,
+        "5": 79.0999984741211,
+        "10": 87.5999984741211
+      },
+      "recall_v2t": {
+        "1": 55.900001525878906,
+        "5": 79.69999694824219,
+        "10": 85.79999542236328
+      },
+      "valid_standard_retrieval_result": false,
+      "note": "Uses each video's matched test caption to select its shared representation."
+    }
+  },
+  "paired_full_minus_semantic_t2v_r1": {
+    "delta_percentage_points": -0.2,
+    "bootstrap_95_percentile_ci": [
+      -0.7000000000000001,
+      0.20249999999998636
+    ],
+    "seed": 42,
+    "replicates": 2000,
+    "unit": "video/single-caption query"
+  },
+  "analysis": {
+    "candidate_redundancy_strata_by_target_video": [
+      {
+        "stratum": "low",
+        "n": 334,
+        "redundancy_min": 0.504108726978302,
+        "redundancy_max": 0.7864068150520325,
+        "t2v_r1": {
+          "candidate_mean": 45.209580838323355,
+          "semantic": 51.49700598802395,
+          "semantic_drop": 51.49700598802395,
+          "keyscore": 51.49700598802395,
+          "greedy": 52.09580838323353,
+          "mmr": 50.59880239520959
+        },
+        "full_minus_semantic_pp": 0.0
+      },
+      {
+        "stratum": "middle",
+        "n": 333,
+        "redundancy_min": 0.7868666648864746,
+        "redundancy_max": 0.8758817315101624,
+        "t2v_r1": {
+          "candidate_mean": 53.153153153153156,
+          "semantic": 51.95195195195195,
+          "semantic_drop": 51.651651651651655,
+          "keyscore": 51.651651651651655,
+          "greedy": 51.651651651651655,
+          "mmr": 53.153153153153156
+        },
+        "full_minus_semantic_pp": -0.3003003003002931
+      },
+      {
+        "stratum": "high",
+        "n": 333,
+        "redundancy_min": 0.8761454820632935,
+        "redundancy_max": 0.9990461468696594,
+        "t2v_r1": {
+          "candidate_mean": 48.64864864864865,
+          "semantic": 48.64864864864865,
+          "semantic_drop": 48.348348348348345,
+          "keyscore": 48.348348348348345,
+          "greedy": 47.44744744744745,
+          "mmr": 48.048048048048045
+        },
+        "full_minus_semantic_pp": -0.3003003003003073
+      }
+    ],
+    "mean_semantic_full_selected_overlap_fraction": 0.98123125,
+    "identical_selected_set_fraction": 0.925248,
+    "full_vs_semantic_mcnemar": {
+      "full_only_correct": 2,
+      "semantic_only_correct": 4,
+      "two_sided_exact_p": 0.6875
+    },
+    "note": "Descriptive post-hoc analysis. All strata retain the complete retrieval database; no tuning."
+  },
+  "provenance": {
+    "summary_sha256": "2ed6869a33388e5823b88e1d1649e20f7cb72ac4b6c25614c2dacf4ddf033d91",
+    "per_pair_sha256": "e1a69d2128ddcbe861d1e48ebdddc18ed78420dcd5f0b31e8ac9a2b334c18e5e",
+    "original_source_sha256": {
+      "scripts/eval_pairwise_retrieval.py": "52458d48b046e7eae7b8f53b9508b69fb7b716fab9bb342b34c03cbaa95b8057",
+      "keyscore/scoring/frame_scorer.py": "63f0b84ad4520714daf3153a11cf946ee0707ba2dfce28b261663d83cd34f138",
+      "keyscore/scoring/selection.py": "9278c9272ec6dd0ec76f1e8262bf5d57e113d3132c5f137ab0e3d3b214abe720",
+      "keyscore/encoders/perception_encoder.py": "98e604d0ee98c0089c7dc8ac5b23192f718a35b6c0f307de1e659d68ec1b4a25",
+      "keyscore/proposals/stacfp.py": "0ae10f91311934cd1a6e24f1fde083b323d400d448ffe77ea2a3589263310b18"
+    },
+    "note": "Measured manuscript run; not a new benchmark after the API refactor."
+  }
+}

@@ -1,26 +1,30 @@
-# Released results
+# Result provenance
 
-Raw JSON produced by the scripts in [`../scripts`](../scripts), backing the paper
-tables. Each file carries a `metadata` block with the exact hyperparameters used.
+## Current revised-manuscript evidence
 
-| File | Script | Scale | Backs |
-| --- | --- | --- | --- |
-| `msrvtt_query_aware.json` | `scripts/eval_query_aware_baseline.py` | 1000 MSR-VTT videos | Controlled query-aware selection comparison |
-| `msrvtt_gamma_time_sweep.json` | `scripts/eval_gamma_time_sweep.py` | 300 MSR-VTT videos | STACFP `gamma_time` sensitivity |
-| `msrvtt_runtime_1k.json` | `scripts/benchmark_msrvtt_mini_runtime.py` | 1000 MSR-VTT videos | Runtime + compute fairness |
-| `mlvu_summary.json` | `scripts/videoqa/mlvu_qa_eval.py` | 1018 MLVU questions | Long-video QA, overall + per-task |
+| File | Provenance | Scope |
+| --- | --- | --- |
+| [msrvtt_pairwise_k4.json](msrvtt_pairwise_k4.json) | Compact export of the completed fixed-K run and saved-pair analysis | 1k videos, one caption per video, 1M pairs, six methods |
+| [mlvu_summary.json](mlvu_summary.json) | Recomputed from 1,018 saved paired predictions; not new inference | Counts, all four tasks, exact question-level McNemar tests |
+| [mlvu_question_ids.json](mlvu_question_ids.json) | Ordered task/video/question IDs from those predictions | Exact slice for the reproduction CLI; no videos or question text |
 
-Dataset paths in `metadata` are written as `$KEYSCORE_DATA_ROOT/...` placeholders.
+The compact retrieval export preserves measured metrics, configuration, hashes,
+timing scope, and descriptive analysis. It omits machine-specific absolute paths,
+process IDs, cached tensors, and the 1,000 annotation captions. Its original source
+hashes identify the measured run, not a new benchmark of the refactored release.
+New experiments write full provenance and matrices under ignored `outputs/`.
 
-Read a summary with:
+## Historical artifacts: not current benchmark claims
 
-```bash
-python -c "
-import json; d = json.load(open('results/msrvtt_query_aware.json'))
-for k, v in d.items():
-    if k == 'metadata': continue
-    print(k, v['avg_selected_frames'], v['retrieval']['recall_t2v'])
-"
-```
+| File | Original script | Limitation |
+| --- | --- | --- |
+| [msrvtt_query_aware.json](msrvtt_query_aware.json) | `eval_query_aware_baseline.py` | Earlier conditioning/threshold protocol; not the current pairwise benchmark |
+| [msrvtt_gamma_time_sweep.json](msrvtt_gamma_time_sweep.json) | `eval_gamma_time_sweep.py` | Earlier 300-video sweep; not a prespecified full-list validation study |
+| [msrvtt_runtime_1k.json](msrvtt_runtime_1k.json) | `benchmark_msrvtt_mini_runtime.py` | Historical A100 timing/accuracy setup; not the GB10 pairwise run |
 
-Interpreted tables are in [`../docs/RESULTS.md`](../docs/RESULTS.md).
+These files are retained for traceability, not used to support current accuracy,
+diversity, transfer, or latency claims. Their numbers must not be substituted for
+the revised results.
+
+See [RESULTS.md](../docs/RESULTS.md) for interpreted tables and
+[REPRODUCE.md](../docs/REPRODUCE.md) for commands.
